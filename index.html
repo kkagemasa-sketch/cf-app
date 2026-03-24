@@ -2619,6 +2619,7 @@ function setLoanMode(mode){
   document.getElementById('loan-pair-tab')?.classList.toggle('on',pairLoanMode);
   document.getElementById('loan-single-body').style.display=pairLoanMode?'none':'';
   document.getElementById('loan-pair-body').style.display=pairLoanMode?'':'none';
+  updateMGDansinUI();
   live();
 }
 let retirePayOn=true;
@@ -3956,12 +3957,13 @@ function renderTable(R,total,disp,cLbls,cYear,loanAmt,isM,hAge,retAge,children,d
   const _prevLeft=_rb?_rb.scrollLeft:0;
   _rb.innerHTML=h;
 
-  // 万が一CF表が生成済みなら通常CF表の下に追加（グラフは再描画しない）
+  // 万が一CF表が生成済みなら通常CF表の下に追加＋グラフ再描画
   if(window._mgHTML){
     const mgDiv=document.createElement('div');
     mgDiv.id='mg-cf-section';
     mgDiv.innerHTML=window._mgHTML;
     _rb.appendChild(mgDiv);
+    if(window.lastMR)_drawMGChart(window.lastMR, R, disp);
   }
 
   if(_rb&&(_prevTop>0||_prevLeft>0)){_rb.scrollTop=_prevTop;_rb.scrollLeft=_prevLeft;}
