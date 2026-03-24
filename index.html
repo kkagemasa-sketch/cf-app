@@ -1491,16 +1491,20 @@ if(authExp&&Date.now()<Number(authExp)){
         </div>
       </div>
       <div id="mg-lc-step-fields" style="display:none">
+        <div style="font-size:10px;color:var(--muted);margin-bottom:7px">通常と同じ形式：各段階で「開始年〜終了年 / 万円/年 / 上昇率」を設定。終了年を空欄にすると以降ずっと継続。</div>
         <div id="mg-lc-steps-container">
           <div class="mg-lc-step" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:8px;margin-bottom:6px">
             <div style="font-size:10px;font-weight:600;color:#64748b;margin-bottom:4px">段階1</div>
-            <div class="g3">
+            <div class="g2" style="margin-bottom:4px">
               <div class="fg"><label class="lbl">金額</label>
                 <div class="suf"><input class="inp amt-inp" id="mg-lsb-1" type="number" value="" placeholder="万円/年" min="0" oninput="live()"><span class="sl">万円/年</span></div></div>
-              <div class="fg"><label class="lbl">上昇率</label>
+              <div class="fg"><label class="lbl">上昇率（0=横ばい）</label>
                 <div class="suf"><input class="inp" id="mg-lsr-1" type="number" value="0" step="0.1" oninput="live()"><span class="sl">%/年</span></div></div>
+            </div>
+              <div class="fg"><label class="lbl">開始年</label>
+                <div class="suf"><input class="inp age-inp" id="mg-lsf-1" type="number" value="" placeholder="死亡翌年" oninput="live()"><span class="sl">年</span></div></div>
               <div class="fg"><label class="lbl">終了年</label>
-                <div class="suf"><input class="inp age-inp" id="mg-lst-1" type="number" value="" placeholder="空欄=ずっと" min="1" oninput="live()"><span class="sl">年後</span></div></div>
+                <div class="suf"><input class="inp age-inp" id="mg-lst-1" type="number" value="" placeholder="空欄=ずっと" oninput="live()"><span class="sl">年</span></div></div>
             </div>
           </div>
         </div>
@@ -4195,8 +4199,160 @@ function renderGraphs(R,disp,isM,total,hAge){
   }
 }
 
+// ===== 万が一Excel出力 =====
+function exportExcelMG(){
+  const mgKey=rTab==='mg-h'?'h':'w';
+  const MR=window._mgMRStore&&window._mgMRStore[mgKey];
+  if(!MR){alert('先に万が一CF表を生成してください');return;}
+  const N=window.lastR;
+  const disp=MR.yr.length;
+  const cLbls=['第一子','第二子','第三子','第四子'];
+  const isM=ST.type==='mansion';
+  const clientName=_v('client-name')||'CF表';
+  const targetIsH=rTab==='mg-h';
+  const targetLabel=targetIsH?'ご主人様':'奥様';
+  const hAge=iv('ha')||30, wAge=iv('wa')||28;
+  const deathAge=targetIsH?(hAge+MR._deathOffset-1):(wAge+MR._deathOffset-1);
+
+  const wb=XLSX.utils.book_new();
+  const rows=[], types=[];
+  const push=(data,type)=>{rows.push(data);types.push(type);};
+  const ri=v=>Math.round(v);
+
+  // タイトル
+  push([`${clientName} 様【万が一】`,`${targetLabel}が${deathAge}歳で死亡した場合`,...Array(disp-1).fill(''),'',''],'title');
+  // 必要保障額
+  push([`必要保障額: ${ri(MR.needCoverage).toLocaleString()}万円`,'',...Array(disp-1).fill(''),'',''],'info');
+  push(Array(disp+3).fill(''),'blank');
+
+  // ヘッダー
+  push(['カテゴリ','項目',...MR.yr.map(String),'合計'],'header');
+  // 経過年
+  push(['経過年','',...MR.yr.map((_,i)=>i+1),'-'],'elapsed');
+  // 年齢
+  push(['年齢',targetIsH?'奥様':'ご主人様',...MR.yr.map((_,i)=>targetIsH?(wAge+i):(hAge+i)),''],'age');
+
+  // 子ども年齢
+  const children=[];
+  document.querySelectorAll('[id^="ca-"]').forEach(el=>{children.push({age:parseInt(el.value)||0});});
+  children.forEach((c,ci)=>{
+    push(['',cLbls[ci],...MR.yr.map((_,i)=>c.age+i),''],'age');
+  });
+
+  // 収入
+  push(['','収　　入',...Array(disp).fill(''),''],'incCat');
+  const addI=(lbl,arr)=>{
+    if(!arr)return;const tot=arr.slice(0,disp).reduce((a,b)=>a+b,0);
+    if(tot===0)return;
+    push(['',lbl,...arr.slice(0,disp).map(v=>ri(v)),ri(tot)],'inc');
+  };
+  addI(targetIsH?'ご主人手取年収':'ご主人手取年収',MR.hInc);
+  addI(targetIsH?'奥様手取年収':'奥様手取年収',MR.wInc);
+  addI('遺族年金',MR.survPension);
+  addI('死亡保険金',MR.insPayArr);
+  addI('奨学金',MR.scholarship);
+  addI('児童手当',N.teate);
+  addI('住宅ローン控除',N.lCtrl);
+  addI('遺族年金',N.survPension);
+  addI('保険満期金',N.insMat);
+  push(['収入合計','',...MR.incT.slice(0,disp).map(v=>ri(v)),ri(MR.incT.slice(0,disp).reduce((a,b)=>a+b,0))],'incTotal');
+
+  // 支出
+  push(['','支　　出',...Array(disp).fill(''),''],'expCat');
+  const addE=(lbl,arr)=>{
+    if(!arr)return;const tot=arr.slice(0,disp).reduce((a,b)=>a+b,0);
+    if(tot===0)return;
+    push(['',lbl,...arr.slice(0,disp).map(v=>ri(v)),ri(tot)],'exp');
+  };
+  addE('生活費',MR.lc);
+  addE('住宅ローン返済',MR.lRep);
+  if(isM)addE('修繕積立金',N.rep);
+  addE('固定資産税',N.ptx);
+  addE('家具家電買替',N.furn);
+  addE(isM?'専有部分修繕費':'修繕費',N.senyu);
+  children.forEach((c,ci)=>{if(N.edu&&N.edu[ci])addE(`${cLbls[ci]}教育費`,N.edu[ci]);});
+  addE('駐車場代',MR.prk);
+  addE('車両費（購入・車検）',MR.carTotal);
+  addE('特別支出',N.ext);
+  push(['支出合計','',...MR.expT.slice(0,disp).map(v=>ri(v)),ri(MR.expT.slice(0,disp).reduce((a,b)=>a+b,0))],'expTotal');
+
+  // 収支・残高
+  push(['年間収支','',...MR.bal.slice(0,disp).map(v=>ri(v)),ri(MR.bal.slice(0,disp).reduce((a,b)=>a+b,0))],'balance');
+  push(['預貯金残高','',...MR.sav.slice(0,disp).map(v=>ri(v)),ri(MR.sav[disp-1])],'savings');
+
+  // シート作成
+  const ws=XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols']=[{wch:14},{wch:18},...Array(disp).fill({wch:9}),{wch:11}];
+
+  // カラーマップ
+  const C={
+    navy:'FF1e3a5f',navyD:'FF0f2744',blue:'FF2d7dd2',
+    redL:'FFfc5b4a',red:'FFd63a2a',green:'FF14b027',white:'FFFFFFFF',black:'FF1a202c',
+    incBg:'FFfbfdff',incFg:'FF1a3a5f',incCat:'FF4a90d9',
+    expBg:'FFfffaf9',expFg:'FF8b1a10',expCat:'FFfc5b4a',
+    ageBg:'FFe8f4fc',ageFg:'FF3a6a8a',
+    border:'FFd0d8e4',zero:'FFbec8d4',
+    mgTitle:'FF8b0035',mgBg:'FFfff5f8',
+  };
+  const bdr={style:'thin',color:{rgb:C.border}};
+  const baseBorder={top:bdr,right:bdr,bottom:bdr,left:bdr};
+
+  const styleDefs={
+    title:{fill:C.mgTitle,font:{sz:12,bold:true,color:C.white}},
+    info:{fill:C.mgBg,font:{sz:10,bold:true,color:C.mgTitle}},
+    blank:{fill:C.white,font:{sz:9,color:C.white}},
+    header:{fill:C.navy,font:{sz:9,bold:true,color:C.white},align:'center'},
+    elapsed:{fill:C.navyD,font:{sz:8,color:'FFa0b4c8'},align:'center'},
+    age:{fill:C.ageBg,font:{sz:8,color:C.ageFg},align:'center'},
+    incCat:{fill:C.incCat,font:{sz:9,bold:true,color:C.white}},
+    inc:{fill:C.incBg,font:{sz:9,color:C.black}},
+    incTotal:{fill:C.blue,font:{sz:9,bold:true,color:C.white}},
+    expCat:{fill:C.expCat,font:{sz:9,bold:true,color:C.white}},
+    exp:{fill:C.expBg,font:{sz:9,color:C.black}},
+    expTotal:{fill:C.redL,font:{sz:9,bold:true,color:C.white}},
+    balance:{fill:C.white,font:{sz:9,bold:true,color:C.black}},
+    savings:{fill:C.green,font:{sz:9,bold:true,color:C.white}},
+  };
+
+  const lastCol=disp+2;
+  rows.forEach((row,r)=>{
+    const tp=types[r];const def=styleDefs[tp]||{};
+    row.forEach((_,c)=>{
+      const addr=XLSX.utils.encode_cell({r,c});
+      if(!ws[addr])ws[addr]={t:'s',v:''};
+      const cell=ws[addr];
+      const fDef=def.font||{};
+      const fObj={name:'Yu Gothic',sz:fDef.sz||9};
+      if(fDef.bold)fObj.bold=true;
+      if(fDef.color)fObj.color={rgb:fDef.color};
+      if(tp==='balance'&&c>=2&&typeof cell.v==='number'){
+        fObj.color={rgb:cell.v<0?C.red:'FF0d8a20'};
+      }
+      if(tp==='savings'&&c>=2&&typeof cell.v==='number'&&cell.v<0){
+        fObj.color={rgb:C.white};
+      }
+      if((tp==='inc'||tp==='exp')&&c>=2&&typeof cell.v==='number'&&cell.v===0){
+        fObj.color={rgb:C.zero};
+      }
+      const bgColor=def.fill;
+      const fillObj=bgColor?{patternType:'solid',fgColor:{rgb:bgColor}}:undefined;
+      cell.s={font:fObj,border:baseBorder,alignment:{horizontal:def.align||(c>=2?'right':'left'),vertical:'center'}};
+      if(fillObj)cell.s.fill=fillObj;
+      if(typeof cell.v==='number')cell.s.numFmt='#,##0';
+    });
+  });
+
+  XLSX.utils.book_append_sheet(wb,ws,'万が一CF表');
+  const fname=`万が一_${clientName}_${targetLabel}_${new Date().toISOString().slice(0,10).replace(/-/g,'')}.xlsx`;
+  XLSX.writeFile(wb,fname);
+}
+
 // ===== Excel出力 =====
 function exportExcel(){
+  // 万が一タブが開いている場合は万が一用Excel出力
+  if((rTab==='mg-h'||rTab==='mg-w')&&window.lastMR){
+    exportExcelMG();return;
+  }
   if(!window.lastR){alert('先にCF表を生成してください');return;}
   const R=window.lastR, disp=window.lastDisp, cYear=window.lastCYear;
   const cLbls=['第一子','第二子','第三子','第四子'];
@@ -5453,13 +5609,17 @@ function addMGLCStep(){
     <span style="font-size:10px;font-weight:600;color:#64748b">段階${n}</span>
     <button onclick="this.parentElement.parentElement.remove()" style="background:#fee;color:#d63a2a;border:1px solid #fca;border-radius:6px;padding:2px 8px;cursor:pointer;font-size:11px">✕</button>
   </div>
-  <div class="g3">
+  <div class="g2" style="margin-bottom:4px">
     <div class="fg"><label class="lbl">金額</label>
       <div class="suf"><input class="inp amt-inp" id="mg-lsb-${n}" type="number" value="" placeholder="万円/年" min="0" oninput="live()"><span class="sl">万円/年</span></div></div>
-    <div class="fg"><label class="lbl">上昇率</label>
+    <div class="fg"><label class="lbl">上昇率（0=横ばい）</label>
       <div class="suf"><input class="inp" id="mg-lsr-${n}" type="number" value="0" step="0.1" oninput="live()"><span class="sl">%/年</span></div></div>
+  </div>
+  <div class="g2">
+    <div class="fg"><label class="lbl">開始年</label>
+      <div class="suf"><input class="inp age-inp" id="mg-lsf-${n}" type="number" value="" placeholder="前段階+1" oninput="live()"><span class="sl">年</span></div></div>
     <div class="fg"><label class="lbl">終了年</label>
-      <div class="suf"><input class="inp age-inp" id="mg-lst-${n}" type="number" value="" placeholder="空欄=ずっと" min="1" oninput="live()"><span class="sl">年後</span></div></div>
+      <div class="suf"><input class="inp age-inp" id="mg-lst-${n}" type="number" value="" placeholder="空欄=ずっと" oninput="live()"><span class="sl">年</span></div></div>
   </div>`;
   cont.appendChild(d);
 }
@@ -5467,11 +5627,12 @@ function getMGLCSteps(){
   const steps=[];
   document.querySelectorAll('.mg-lc-step').forEach(el=>{
     const inputs=el.querySelectorAll('input');
-    if(inputs.length>=3){
+    if(inputs.length>=4){
       steps.push({
         base:parseFloat(inputs[0].value)||0,
         rate:parseFloat(inputs[1].value)||0,
-        endYr:parseInt(inputs[2].value)||0
+        fromYr:parseInt(inputs[2].value)||0,
+        toYr:parseInt(inputs[3].value)||0
       });
     }
   });
@@ -5649,23 +5810,24 @@ function renderContingency(){
     let lcVal=normalLC;
     if(isDead){
       if(mgLCMode==='step'&&mgLCSteps.length>0){
-        // 段階設定モード：死亡後の経過年で段階を判定
-        const yrsAfterDeath=i-(deathYearOffset-1)+1;
-        let cumYr=0, found=false;
+        // 段階設定モード：西暦ベースで判定
+        const yr=MR.yr[i];
+        let found=false;
         for(const st of mgLCSteps){
-          const endY=st.endYr||9999;
-          if(yrsAfterDeath>cumYr&&yrsAfterDeath<=cumYr+endY){
-            const yrInStep=yrsAfterDeath-cumYr-1;
+          const from=st.fromYr||0;
+          const to=st.toYr||9999;
+          if(yr>=from&&yr<=to){
+            const yrInStep=yr-from;
             lcVal=ri(st.base*Math.pow(1+st.rate/100,yrInStep));
             found=true;break;
           }
-          cumYr+=endY;
         }
         if(!found){
+          // 最後の段階を継続
           const last=mgLCSteps[mgLCSteps.length-1];
-          const totalPrev=mgLCSteps.slice(0,-1).reduce((s,st)=>s+(st.endYr||9999),0);
-          const yrInLast=yrsAfterDeath-totalPrev-1;
-          lcVal=ri(last.base*Math.pow(1+last.rate/100,Math.max(0,yrInLast)));
+          const from=last.fromYr||0;
+          const yrInStep=Math.max(0,yr-from);
+          lcVal=ri(last.base*Math.pow(1+last.rate/100,yrInStep));
         }
       }else{
         // 割合モード
@@ -5943,8 +6105,13 @@ function renderContingency(){
   if(!window._mgStore)window._mgStore={};
   const mgKey=targetIsH?'h':'w';
   window._mgStore[mgKey]=h;
+  MR._deathOffset=deathYearOffset;
+  MR._targetIsH=targetIsH;
   window.lastMR=MR;
-  window._mgHTML=null; // CF表タブに追加しない
+  // タブごとにMRも保存
+  if(!window._mgMRStore)window._mgMRStore={};
+  window._mgMRStore[mgKey]=MR;
+  window._mgHTML=null;
 
   // タブボタンを表示
   const tabId=targetIsH?'rt-mg-h':'rt-mg-w';
