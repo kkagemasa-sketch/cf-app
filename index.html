@@ -5340,7 +5340,9 @@ function getMGInsuranceTotal(){
 
 // ===== 万が一CF表の計算・描画 =====
 function renderContingency(){
-  if(!window.lastR){alert('先に通常のCF表を生成してください');return;}
+  // 先に通常CF表を最新化
+  render();
+  if(!window.lastR){alert('先にCF表を生成してください');return;}
   const hAge=iv('husband-age')||30, wAge=iv('wife-age')||29;
   const deathYearOffset=iv('mg-death-year')||1;
   const deathYear=new Date().getFullYear()+deathYearOffset-1;
@@ -5557,77 +5559,130 @@ function renderContingency(){
     </div>
   </div>`;
 
-  // CF表テーブル
+  // CF表テーブル（通常CF表と同じ構造）
+  const isM=ST.type==='mansion';
+  const cLbls=['第一子','第二子','第三子','第四子'];
+  const N=normalR;// 通常データの参照用
+
   h+=`<div class="tbl-wrap"><table class="cf">`;
   h+=`<tr class="ryr"><th>カテゴリ</th><th>項目</th>`;
   for(let i=0;i<mgDisp;i++)h+=`<th>${MR.yr[i]}</th>`;
   h+=`<th>合計</th></tr>`;
 
-  // 年齢
+  // 経過年数
+  h+=`<tr class="relapsed"><td>経過年</td><td></td>`;
+  for(let i=0;i<mgDisp;i++)h+=`<td>${i+1}</td>`;h+=`<td>-</td></tr>`;
+
+  // 年齢（死亡後は✝マーク）
   h+=`<tr class="rage"><td>年齢</td><td>ご主人様</td>`;
-  for(let i=0;i<mgDisp;i++){
-    const isDead=targetIsH&&i>=deathYearOffset-1;
-    h+=`<td style="${isDead?'color:#ccc':'color:var(--navy)'}">${isDead?'✝'+MR.hA[i]:MR.hA[i]}</td>`;
-  }
+  for(let i=0;i<mgDisp;i++){const d=targetIsH&&i>=deathYearOffset-1;h+=`<td style="${d?'color:#ccc':''}">${d?'✝'+MR.hA[i]:MR.hA[i]}</td>`;}
   h+=`<td></td></tr>`;
   h+=`<tr class="rage"><td></td><td>奥様</td>`;
-  for(let i=0;i<mgDisp;i++){
-    const isDead=!targetIsH&&i>=deathYearOffset-1;
-    h+=`<td style="${isDead?'color:#ccc':'color:var(--navy)'}">${isDead?'✝'+MR.wA[i]:MR.wA[i]}</td>`;
-  }
+  for(let i=0;i<mgDisp;i++){const d=!targetIsH&&i>=deathYearOffset-1;h+=`<td style="${d?'color:#ccc':''}">${d?'✝'+MR.wA[i]:MR.wA[i]}</td>`;}
   h+=`<td></td></tr>`;
+  children.forEach((c,ci)=>{h+=`<tr class="rage"><td></td><td>${cLbls[ci]}</td>`;for(let i=0;i<mgDisp;i++)h+=`<td>${N.cA[ci][i]}</td>`;h+=`<td></td></tr>`;});
 
-  // 収入
-  h+=`<tr class="rinc-cat"><td colspan="2">収　　入</td>`;
-  for(let i=0;i<mgDisp;i++)h+=`<td></td>`;h+=`<td></td></tr>`;
-
-  const addRow=(cls,lbl,arr,skipZero)=>{
-    const tot=arr.slice(0,mgDisp).reduce((a,b)=>a+b,0);
-    if(skipZero&&tot===0)return;
-    h+=`<tr class="${cls}"><td></td><td>${lbl}</td>`;
+  // イベント（通常と同じ＋死亡イベント追加）
+  h+=`<tr class="rev-h"><td>イベント</td><td>ご主人様</td>`;
+  for(let i=0;i<mgDisp;i++){
+    let ev=N.evH[i]||'';
+    if(targetIsH&&i===deathYearOffset-1)ev='🕊️ ご逝去';
+    else if(targetIsH&&i>deathYearOffset-1)ev='';
+    h+=`<td>${ev}</td>`;
+  }h+=`<td></td></tr>`;
+  h+=`<tr class="rev-w"><td></td><td>奥様</td>`;
+  for(let i=0;i<mgDisp;i++){
+    let ev=N.evW[i]||'';
+    if(!targetIsH&&i===deathYearOffset-1)ev='🕊️ ご逝去';
+    else if(!targetIsH&&i>deathYearOffset-1)ev='';
+    h+=`<td>${ev}</td>`;
+  }h+=`<td></td></tr>`;
+  children.forEach((c,ci)=>{
+    h+=`<tr class="rev-c"><td></td><td>${cLbls[ci]}</td>`;
     for(let i=0;i<mgDisp;i++){
-      const v=arr[i]||0;
-      h+=`<td class="${v===0?'zero':''}">${v===0?'-':ri(v).toLocaleString()}</td>`;
-    }
-    h+=`<td class="tot">${ri(tot).toLocaleString()}</td></tr>`;
-  };
+      const ca=N.cA[ci][i];let cls='',label=N.evC[ci][i]||'';
+      if(ca>=1&&ca<=6)cls='ev-hoiku';
+      else if(ca>=7&&ca<=12)cls='ev-elem';
+      else if(ca>=13&&ca<=15)cls='ev-mid';
+      else if(ca>=16&&ca<=18)cls='ev-high';
+      else if(ca>=19){const un=_v(`cu-${ci+1}`)||'plit_h';const ul=(EDU.univ[un]||[]).length;if(ul>0&&ca<19+ul)cls=un.startsWith('senmon')?'ev-senmon':'ev-univ';}
+      h+=`<td class="${cls}">${label}</td>`;
+    }h+=`<td></td></tr>`;
+  });
 
-  addRow('rinc','ご主人手取年収',MR.hInc,true);
-  addRow('rinc','奥様手取年収',MR.wInc,true);
-  addRow('rinc','遺族年金',MR.survPension,true);
-  addRow('rinc','死亡保険金',MR.insPayArr,true);
+  // ─ 収入 ─
+  h+=`<tr class="rcat inc-cat"><td></td><td>収　　入</td>`;for(let i=0;i<mgDisp;i++)h+=`<td></td>`;h+=`<td></td></tr>`;
+  const mgRow=(lbl,arr)=>{const tot=arr.slice(0,mgDisp).reduce((a,b)=>a+b,0);if(tot===0)return'';let r=`<tr class="rinc"><td></td><td>${lbl}</td>`;for(let i=0;i<mgDisp;i++){const v=arr[i]||0;r+=`<td class="${v===0?'vz':''}">${v>0?ri(v).toLocaleString():'-'}</td>`;}return r+`<td>${ri(tot).toLocaleString()}</td></tr>`;};
+
+  h+=mgRow('ご主人手取年収',MR.hInc);
+  h+=mgRow('奥様手取年収',MR.wInc);
+  // その他収入（通常と同じ）
+  h+=mgRow('副業・その他収入',N.otherInc);
+  h+=mgRow('保険満期金',N.insMat);
+  if(N.secRedeemRows)N.secRedeemRows.forEach(row=>{h+=mgRow(row.lbl,row.vals);});
+  // 退職金（死亡者は受け取れない場合あり）
+  const rPayMG=MR.hInc.map((_,i)=>{
+    let v=0;
+    const ha=hAge+i,wa=wAge+i;
+    const retPayAge2=iv('retire-pay-age')||iv('retire-age')||65;
+    const wRetPayAge2=iv('w-retire-pay-age')||iv('w-retire-age')||60;
+    if(targetIsH){if(!(i>=deathYearOffset-1)&&ha===retPayAge2)v+=ri(fv('retire-pay'));if(wa===wRetPayAge2)v+=ri(fv('w-retire-pay'));}
+    else{if(ha===retPayAge2)v+=ri(fv('retire-pay'));if(!(i>=deathYearOffset-1)&&wa===wRetPayAge2)v+=ri(fv('w-retire-pay'));}
+    return v;
+  });
+  h+=mgRow('退職金',rPayMG);
+  h+=mgRow('死亡保険金',MR.insPayArr);
+  h+=mgRow('遺族年金',MR.survPension);
+  h+=mgRow('児童手当',N.teate);
+  h+=mgRow('住宅ローン控除',N.lCtrl);
   // 収入合計
-  h+=`<tr class="rinc-tot"><td>収入合計</td><td></td>`;
-  let incSum=0;
-  for(let i=0;i<mgDisp;i++){incSum+=MR.incT[i];h+=`<td>${ri(MR.incT[i]).toLocaleString()}</td>`;}
-  h+=`<td>${ri(incSum).toLocaleString()}</td></tr>`;
+  h+=`<tr class="rinct"><td>収入合計</td><td></td>`;
+  for(let i=0;i<mgDisp;i++)h+=`<td>${ri(MR.incT[i]).toLocaleString()}</td>`;
+  h+=`<td>${ri(MR.incT.slice(0,mgDisp).reduce((a,b)=>a+b,0)).toLocaleString()}</td></tr>`;
 
-  // 支出
-  h+=`<tr class="rexp-cat"><td colspan="2">支　　出</td>`;
-  for(let i=0;i<mgDisp;i++)h+=`<td></td>`;h+=`<td></td></tr>`;
-  addRow('rexp','生活費',MR.lc,true);
-  addRow('rexp','住宅ローン返済',MR.lRep,true);
+  // ─ 支出 ─
+  h+=`<tr class="rcat exp-cat"><td></td><td>支　　出</td>`;for(let i=0;i<mgDisp;i++)h+=`<td></td>`;h+=`<td></td></tr>`;
+  const mgERow=(lbl,arr)=>{const tot=arr.slice(0,mgDisp).reduce((a,b)=>a+b,0);if(tot===0)return'';let r=`<tr class="rexp"><td></td><td>${lbl}</td>`;for(let i=0;i<mgDisp;i++){const v=arr[i]||0;r+=`<td class="${v===0?'vz':''}">${v>0?ri(v).toLocaleString():'-'}</td>`;}return r+`<td>${ri(tot).toLocaleString()}</td></tr>`;};
+
+  h+=mgERow('生活費',MR.lc);
+  h+=mgERow('積立投資額',N.secInvest);
+  h+=mgERow('一括投資額',N.secBuy);
+  h+=mgERow('家賃（引渡前）',N.rent);
+  h+=mgERow('住宅ローン返済',MR.lRep);
+  if(isM)h+=mgERow('修繕積立金',N.rep);
+  h+=mgERow('固定資産税',N.ptx);
+  h+=mgERow('家具家電買替',N.furn);
+  h+=mgERow(isM?'専有部分修繕費':'修繕費',N.senyu);
+  children.forEach((c,ci)=>{
+    const eduArr=N.edu[ci];
+    const tot=eduArr.slice(0,mgDisp).reduce((a,b)=>a+b,0);if(tot===0)return;
+    const un=_v(`cu-${ci+1}`)||'plit_h';const univLen=(EDU.univ[un]||[]).length;
+    h+=`<tr class="rexp"><td></td><td>${cLbls[ci]}教育費</td>`;
+    for(let i=0;i<mgDisp;i++){
+      const v=eduArr[i]||0;const ca=c.age+i;
+      let cls=v===0?'vz':'';
+      if(v>0){if(ca>=1&&ca<=6)cls='edu-hoiku';else if(ca>=7&&ca<=12)cls='edu-elem';else if(ca>=13&&ca<=15)cls='edu-mid';else if(ca>=16&&ca<=18)cls='edu-high';else if(ca>=19&&ca<19+univLen)cls=un.startsWith('senmon')?'edu-senmon':'edu-univ';}
+      h+=`<td class="${cls}">${v>0?ri(v).toLocaleString():'-'}</td>`;
+    }h+=`<td>${ri(tot).toLocaleString()}</td></tr>`;
+  });
+  h+=mgERow('駐車場代',N.prk);
+  h+=mgERow('車両費（購入・車検）',N.carTotal);
+  h+=mgERow('結婚のお祝い',N.wedding);
+  h+=mgERow('特別支出',N.ext);
+
   // 支出合計
-  h+=`<tr class="rexp-tot"><td>支出合計</td><td></td>`;
-  let expSum=0;
-  for(let i=0;i<mgDisp;i++){expSum+=MR.expT[i];h+=`<td>${ri(MR.expT[i]).toLocaleString()}</td>`;}
-  h+=`<td>${ri(expSum).toLocaleString()}</td></tr>`;
+  h+=`<tr class="rexpt"><td>支出合計</td><td></td>`;
+  for(let i=0;i<mgDisp;i++)h+=`<td>${ri(MR.expT[i]).toLocaleString()}</td>`;
+  h+=`<td>${ri(MR.expT.slice(0,mgDisp).reduce((a,b)=>a+b,0)).toLocaleString()}</td></tr>`;
 
-  // 年間収支
+  // ─ 収支・残高 ─
   h+=`<tr class="rbal"><td>年間収支</td><td></td>`;
-  for(let i=0;i<mgDisp;i++){
-    const v=MR.bal[i];
-    h+=`<td style="color:${v<0?'var(--red)':'var(--green)'};font-weight:700">${v<0?'▲'+Math.abs(ri(v)).toLocaleString():ri(v).toLocaleString()}</td>`;
-  }
+  for(let i=0;i<mgDisp;i++){const v=ri(MR.bal[i]);h+=`<td class="${v<0?'vn':v>0?'vp':'vz'}">${v>=0?v.toLocaleString():'▲'+Math.abs(v).toLocaleString()}</td>`;}
   h+=`<td></td></tr>`;
 
-  // 預貯金残高
   h+=`<tr class="rsav"><td>預貯金残高</td><td></td>`;
-  for(let i=0;i<mgDisp;i++){
-    const v=MR.sav[i];
-    h+=`<td style="color:${v<0?'#fff':'var(--navy)'};background:${v<0?'var(--red)':'var(--green)'};font-weight:700">${v<0?'▲'+Math.abs(ri(v)).toLocaleString():ri(v).toLocaleString()}</td>`;
-  }
-  h+=`<td></td></tr>`;
+  for(let i=0;i<mgDisp;i++){const v=ri(MR.sav[i]);h+=`<td class="${v<0?'vn':''}">${v>=0?v.toLocaleString():'▲'+Math.abs(v).toLocaleString()}</td>`;}
+  h+=`<td>${ri(MR.sav[mgDisp-1]).toLocaleString()}</td></tr>`;
 
   h+=`</table></div>`;
 
