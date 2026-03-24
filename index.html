@@ -4009,22 +4009,28 @@ function exportExcel(){
   const deliveryYrV=iv('delivery-year')||0;
   const emptyFill=Array(disp-1).fill('');
 
-  // お客様名（左上）
-  push([`${clientName} 様`,isM?'マンション':'戸建て',...emptyFill,'',''],'title');
+  // お客様名（左上）- A+B結合
+  push([`${clientName} 様`,'',isM?'マンション':'戸建て',...emptyFill.slice(0,Math.max(0,disp-1)),'',''],'title');
 
-  // 自己資金の内訳（ラベルと値を交互に）
-  const infoRow1=['💰 自己資金の内訳','','現預金合計',`${cashTotal}万円`,'',downType==='gift'?'頭金（贈与）':'頭金（自己資金）',`${downPay}万円`,'','諸費用',`${houseCostV}万円`,'','引越・家具',`${(movingCostV+furnitureInitV)}万円`,'','▶ 購入後残高',`${cashAfter}万円`];
+  // 頭金の内訳 - A+B結合
+  const infoRow1=['💰 頭金の内訳','','現預金合計',`${cashTotal}万円`,'',downType==='gift'?'頭金（贈与）':'頭金（自己資金）',`${downPay}万円`,'','諸費用',`${houseCostV}万円`,'','引越・家具',`${(movingCostV+furnitureInitV)}万円`,'','購入後残高',`${cashAfter}万円`];
+  // infoRowの実データ長を記録（これ以降は塗りつぶしなし）
+  const infoRow1Len=infoRow1.length;
   while(infoRow1.length<disp+3)infoRow1.push('');
   push(infoRow1,'info');
 
-  // 住宅ローン条件
+  // 住宅ローン条件 - A+B結合
   const infoRow2=['🏦 住宅ローン条件','','住宅価格',`${housePrice}万円`,'','借入総額',`${loanAmtV}万円`,'','金利',rateDisp,'','借入期間',`${loanYrsV}年`];
   if(deliveryYrV>0){infoRow2.push('','引き渡し',`${deliveryYrV}年`);}
+  const infoRow2Len=infoRow2.length;
   while(infoRow2.length<disp+3)infoRow2.push('');
   push(infoRow2,'info');
 
   // 空行（塗りつぶしなし）
   push(Array(disp+3).fill(''),'blank');
+
+  // info行のデータ長を記録（スタイル適用時に使用）
+  const infoDataLens=[infoRow1Len,infoRow2Len];
 
   // ── 行データ構築 ──
   // 年ヘッダー
@@ -4120,16 +4126,25 @@ function exportExcel(){
 
   const ws=XLSX.utils.aoa_to_sheet(rows);
 
-  // セル結合：使用者情報（左）、注意文（右隣）
+  // セル結合
   if(!ws['!merges'])ws['!merges']=[];
+  // title行(row0)のA+B結合
+  ws['!merges'].push({s:{r:0,c:0},e:{r:0,c:1}});
+  // info行(row1,row2)のA+B結合
+  const infoRowIndices=[];
+  types.forEach((t,i)=>{if(t==='info')infoRowIndices.push(i);});
+  infoRowIndices.forEach(ri=>{
+    ws['!merges'].push({s:{r:ri,c:0},e:{r:ri,c:1}});
+  });
+  // 使用者情報（左）、注意文（右隣）
   for(let i=0;i<footerRowCount;i++){
     const r=footerStartRow+i;
     ws['!merges'].push({s:{r,c:0},e:{r,c:piEndCol}});
     ws['!merges'].push({s:{r,c:splitCol},e:{r,c:noteEndCol}});
   }
 
-  // 列幅
-  ws['!cols']=[{wch:16},{wch:18},...Array(disp).fill({wch:9}),{wch:11}];
+  // 列幅（購入後残高が見切れないよう調整）
+  ws['!cols']=[{wch:18},{wch:18},...Array(disp).fill({wch:9}),{wch:11}];
   // 行固定＋左2列固定
   const headerRowIdx=types.indexOf('header');
   ws['!freeze']={xSplit:2,ySplit:headerRowIdx+1,topLeftCell:XLSX.utils.encode_cell({r:headerRowIdx+1,c:2}),state:'frozen'};
@@ -4215,19 +4230,29 @@ function exportExcel(){
       // info行：ラベルセルは太字、値セル（万円等）は強調
       if(tp==='info'&&c===0){fObj.bold=true;fObj.sz=9;fObj.color={rgb:C.white};}
       if(tp==='info'&&c>=2){
-        const v=String(cell.v||'');
-        if(v.includes('万円')||v.includes('%')||v.includes('年')){
-          fObj.bold=true;fObj.sz=10;fObj.color={rgb:C.navy};
-        }else if(v&&v!=='▶'&&!v.includes('万円')){
-          fObj.bold=true;fObj.color={rgb:'FF5a6a7e'};
-        }
-        // 購入後残高の色分け
-        if(v.includes('購入後残高')){fObj.bold=true;fObj.color={rgb:'FF2d5282'};}
-        if(c>0&&String(rows[r][c-1]||'').includes('購入後残高')){
-          fObj.bold=true;fObj.sz=10;
-          fObj.color={rgb:cashAfter>=0?'FF0d8a20':C.red};
+        // infoデータ範囲外は塗りつぶしなし
+        const infoIdx=infoRowIndices.indexOf(r);
+        const dataLen=infoIdx>=0&&infoIdx<infoDataLens.length?infoDataLens[infoIdx]:999;
+        if(c>=dataLen){
+          // 範囲外：塗りつぶしなし扱い
+          cell._noFill=true;
+        }else{
+          const v=String(cell.v||'');
+          if(v.includes('万円')||v.includes('%')||v.includes('年')){
+            fObj.bold=true;fObj.sz=10;fObj.color={rgb:C.navy};
+          }else if(v&&v!=='▶'){
+            fObj.bold=true;fObj.color={rgb:'FF5a6a7e'};
+          }
+          // 購入後残高の色分け
+          if(v.includes('購入後残高')){fObj.bold=true;fObj.color={rgb:'FF2d5282'};}
+          if(c>0&&String(rows[r][c-1]||'').includes('購入後残高')){
+            fObj.bold=true;fObj.sz=10;
+            fObj.color={rgb:cashAfter>=0?'FF0d8a20':C.red};
+          }
         }
       }
+      // title行：データ範囲外は塗りつぶしなし
+      if(tp==='title'&&c>=3){cell._noFill=true;}
       // title行の物件タイプ（2列目）
       if(tp==='title'&&c===1){fObj.sz=10;}
       // 年間収支の赤/緑
@@ -4284,8 +4309,8 @@ function exportExcel(){
         }
       }
 
-      // blank/footer行は塗りつぶしなし
-      const finalFill=noBorder?undefined:cellFill;
+      // blank/footer行・範囲外セルは塗りつぶしなし
+      const finalFill=(noBorder||cell._noFill)?undefined:cellFill;
       cell.s={
         font:fObj,
         fill:finalFill,
