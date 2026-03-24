@@ -1508,37 +1508,60 @@ if(authExp&&Date.now()<Number(authExp)){
 
       <!-- 奨学金 -->
       <div class="sub">🎓 奨学金</div>
-      <div class="g2">
+      <div class="g2" style="margin-bottom:8px">
         <div class="fg"><label class="lbl">奨学金</label>
           <div style="display:flex;gap:4px">
-            <button type="button" class="btn-tog" onclick="this.classList.add('act');this.nextElementSibling.classList.remove('act');document.getElementById('mg-scholarship-amt').parentElement.parentElement.style.display='none';live()" id="mg-scholarship-none">なし</button>
-            <button type="button" class="btn-tog act" onclick="this.classList.add('act');this.previousElementSibling.classList.remove('act');document.getElementById('mg-scholarship-amt').parentElement.parentElement.style.display='';live()" id="mg-scholarship-yes">あり</button>
+            <button type="button" class="btn-tog act" onclick="this.classList.add('act');this.nextElementSibling.classList.remove('act');document.getElementById('mg-scholarship-fields').style.display='none';live()" id="mg-scholarship-none">なし</button>
+            <button type="button" class="btn-tog" onclick="this.classList.add('act');this.previousElementSibling.classList.remove('act');document.getElementById('mg-scholarship-fields').style.display='';live()" id="mg-scholarship-yes">あり</button>
           </div></div>
-        <div class="fg"><label class="lbl">年額</label>
-          <div class="suf"><input class="inp" id="mg-scholarship-amt" type="number" value="0" min="0" oninput="live()"><span class="sl">万円/年</span></div></div>
+        <div></div>
       </div>
-      <div class="g2">
-        <div class="fg"><label class="lbl">開始（子の年齢）</label>
-          <div class="suf"><input class="inp" id="mg-scholarship-from" type="number" value="18" min="0" oninput="live()"><span class="sl">歳</span></div></div>
-        <div class="fg"><label class="lbl">終了（子の年齢）</label>
-          <div class="suf"><input class="inp" id="mg-scholarship-to" type="number" value="22" min="0" oninput="live()"><span class="sl">歳</span></div></div>
+      <div id="mg-scholarship-fields" style="display:none">
+        <div class="g2">
+          <div class="fg"><label class="lbl">総額</label>
+            <div class="suf"><input class="inp amt-inp" id="mg-scholarship-amt" type="number" value="0" min="0" oninput="live()"><span class="sl">万円</span></div></div>
+          <div class="fg"><label class="lbl">借入時（第一子の年齢）</label>
+            <div class="suf"><input class="inp age-inp" id="mg-scholarship-age" type="number" value="19" min="15" max="25" oninput="live()"><span class="sl">歳</span></div></div>
+        </div>
       </div>
 
       <div class="divider"></div>
 
       <!-- 車両費・駐車場 -->
       <div class="sub">🚗 車両費・駐車場</div>
-      <div class="g2">
-        <div class="fg"><label class="lbl">車両費</label>
+      <div class="g2" style="margin-bottom:8px">
+        <div class="fg"><label class="lbl">車両</label>
           <div style="display:flex;gap:4px">
-            <button type="button" class="btn-tog act" onclick="this.classList.add('act');this.nextElementSibling.classList.remove('act');live()" id="mg-car-keep">継続</button>
-            <button type="button" class="btn-tog" onclick="this.classList.add('act');this.previousElementSibling.classList.remove('act');live()" id="mg-car-stop">なし</button>
+            <button type="button" class="btn-tog act" onclick="this.classList.add('act');this.nextElementSibling.classList.remove('act');document.getElementById('mg-car-fields').style.display='';live()" id="mg-car-keep">継続</button>
+            <button type="button" class="btn-tog" onclick="this.classList.add('act');this.previousElementSibling.classList.remove('act');document.getElementById('mg-car-fields').style.display='none';live()" id="mg-car-stop">なし</button>
           </div></div>
-        <div class="fg"><label class="lbl">駐車場代</label>
+        <div class="fg"><label class="lbl">駐車場</label>
           <div style="display:flex;gap:4px">
-            <button type="button" class="btn-tog act" onclick="this.classList.add('act');this.nextElementSibling.classList.remove('act');live()" id="mg-park-keep">継続</button>
-            <button type="button" class="btn-tog" onclick="this.classList.add('act');this.previousElementSibling.classList.remove('act');live()" id="mg-park-stop">なし</button>
+            <button type="button" class="btn-tog act" onclick="this.classList.add('act');this.nextElementSibling.classList.remove('act');document.getElementById('mg-park-fields').style.display='';live()" id="mg-park-keep">継続</button>
+            <button type="button" class="btn-tog" onclick="this.classList.add('act');this.previousElementSibling.classList.remove('act');document.getElementById('mg-park-fields').style.display='none';live()" id="mg-park-stop">なし</button>
           </div></div>
+      </div>
+      <div id="mg-car-fields">
+        <div class="g3" style="margin-bottom:6px">
+          <div class="fg"><label class="lbl">車両価格</label>
+            <div class="suf"><input class="inp amt-inp" id="mg-car-price" type="number" value="300" min="0" oninput="live()"><span class="sl">万円</span></div></div>
+          <div class="fg"><label class="lbl">乗り換え周期</label>
+            <div class="suf"><input class="inp age-inp" id="mg-car-cycle" type="number" value="7" min="1" max="20" oninput="live()"><span class="sl">年ごと</span></div></div>
+          <div class="fg"><label class="lbl">車検費用</label>
+            <div class="suf"><input class="inp amt-inp" id="mg-car-insp" type="number" value="10" min="0" oninput="live()"><span class="sl">万円</span></div></div>
+        </div>
+        <div class="g2" style="margin-bottom:6px">
+          <div class="fg"><label class="lbl">手放す年齢（遺族）</label>
+            <div class="suf"><input class="inp age-inp" id="mg-car-end-age" type="number" value="" placeholder="空欄=ずっと" min="30" max="100" oninput="live()"><span class="sl">歳</span></div></div>
+          <div></div>
+        </div>
+      </div>
+      <div id="mg-park-fields">
+        <div class="g2" style="margin-bottom:6px">
+          <div class="fg"><label class="lbl">月額駐車場代</label>
+            <div class="suf"><input class="inp amt-inp" id="mg-parking" type="number" value="15000" min="0" oninput="live()"><span class="sl">円/月</span></div></div>
+          <div></div>
+        </div>
       </div>
 
       <div class="divider"></div>
@@ -5435,8 +5458,7 @@ function renderContingency(){
   const mgParkKeep=getMGParkOn();
   const mgScholarOn=document.getElementById('mg-scholarship-yes')?.classList.contains('act');
   const mgScholarAmt=mgScholarOn?(fv('mg-scholarship-amt')||0):0;
-  const mgScholarFrom=iv('mg-scholarship-from')||18;
-  const mgScholarTo=iv('mg-scholarship-to')||22;
+  const mgScholarAge=iv('mg-scholarship-age')||19;
   const insTotal=getMGInsuranceTotal();
   const pSelf=fv('pension-h')||186, pWife=fv('pension-w')||66;
   const pHReceive=iv('pension-h-receive')||65;
@@ -5552,12 +5574,11 @@ function renderContingency(){
       else pSelfVal=0;
     }
 
-    // 奨学金：通常分 + 万が一追加分
+    // 奨学金：通常分 + 万が一追加分（総額を一括で収入計上）
     let scholarVal=i<normalR.scholarship.length?(normalR.scholarship[i]||0):0;
-    if(isDead&&mgScholarAmt>0){
-      // 第一子の年齢で判定
-      const firstChildAge=children.length>0?(children[0].age+i):99;
-      if(firstChildAge>=mgScholarFrom&&firstChildAge<=mgScholarTo){
+    if(isDead&&mgScholarAmt>0&&children.length>0){
+      const firstChildAge=children[0].age+i;
+      if(firstChildAge===mgScholarAge){
         scholarVal+=mgScholarAmt;
       }
     }
@@ -5602,8 +5623,41 @@ function renderContingency(){
     MR.lRep.push(lRep);
 
     // その他支出（通常と同じ分を引用。車両・駐車場は個別制御）
-    const nCar=isDead&&!mgCarKeep?0:(i<normalR.carTotal.length?(normalR.carTotal[i]||0):0);
-    const nPrk=isDead&&!mgParkKeep?0:(i<normalR.prk.length?(normalR.prk[i]||0):0);
+    // 車両費：万が一用の設定で再計算
+    let nCar=0;
+    if(!mgCarKeep&&isDead){
+      nCar=0;
+    }else if(mgCarKeep&&isDead){
+      // 万が一専用の車設定で計算
+      const mgCarPrice=fv('mg-car-price')||300;
+      const mgCarCycle=iv('mg-car-cycle')||7;
+      const mgCarInsp=fv('mg-car-insp')||10;
+      const mgCarEndAge=iv('mg-car-end-age')||0;
+      const survivorAge=targetIsH?wa:ha;
+      if(mgCarEndAge>0&&survivorAge>mgCarEndAge){
+        nCar=0;
+      }else{
+        const yrsFromDeath=i-(deathYearOffset-1);
+        if(yrsFromDeath>=0){
+          if(yrsFromDeath>0&&yrsFromDeath%mgCarCycle===0)nCar+=mgCarPrice;
+          // 車検（初回3年後、以降2年ごと）
+          const carAge=yrsFromDeath%mgCarCycle;
+          if(carAge===3||(carAge>3&&(carAge-3)%2===0))nCar+=mgCarInsp;
+        }
+      }
+    }else{
+      nCar=i<normalR.carTotal.length?(normalR.carTotal[i]||0):0;
+    }
+    // 駐車場
+    let nPrk=0;
+    if(!mgParkKeep&&isDead){
+      nPrk=0;
+    }else if(mgParkKeep&&isDead){
+      const mgParkAmt=fv('mg-parking')||15000;
+      nPrk=ri(mgParkAmt*12/10000);
+    }else{
+      nPrk=i<normalR.prk.length?(normalR.prk[i]||0):0;
+    }
     MR.carTotal.push(nCar);
     MR.prk.push(nPrk);
     // 通常のその他支出（生活費・ローン・車・駐車場を除く）
