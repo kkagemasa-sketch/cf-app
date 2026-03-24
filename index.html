@@ -1476,6 +1476,25 @@ if(authExp&&Date.now()<Number(authExp)){
 
       <div class="divider"></div>
 
+      <!-- 車両・駐車場 -->
+      <div class="sub">🚗 車両費・駐車場</div>
+      <div class="g2">
+        <div class="fg"><label class="lbl">車両費</label>
+          <div style="display:flex;gap:6px">
+            <button class="btn-tog on" id="mg-car-yes" onclick="setMGCar(true)">継続</button>
+            <button class="btn-tog" id="mg-car-no" onclick="setMGCar(false)">なし</button>
+          </div>
+        </div>
+        <div class="fg"><label class="lbl">駐車場代</label>
+          <div style="display:flex;gap:6px">
+            <button class="btn-tog on" id="mg-park-yes" onclick="setMGPark(true)">継続</button>
+            <button class="btn-tog" id="mg-park-no" onclick="setMGPark(false)">なし</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
       <!-- 生活費の変化 -->
       <div class="sub">🏠 死亡後の生活費</div>
       <div class="g2">
@@ -5338,6 +5357,9 @@ function addMGInsurance(){
     <button onclick="this.parentElement.parentElement.parentElement.parentElement.remove()" style="background:#fee;color:#d63a2a;border:1px solid #fca;border-radius:6px;padding:2px 8px;cursor:pointer;font-size:11px">✕</button></div></div>`;
   cont.appendChild(d);
 }
+let mgCarOn=true, mgParkOn=true;
+function setMGCar(on){mgCarOn=on;$('mg-car-yes').classList.toggle('on',on);$('mg-car-no').classList.toggle('on',!on);}
+function setMGPark(on){mgParkOn=on;$('mg-park-yes').classList.toggle('on',on);$('mg-park-no').classList.toggle('on',!on);}
 function updateMGHints(){
   const ratio=parseInt($('mg-lc-ratio')?.value)||70;
   $('mg-lc-hint').textContent=`✓ 死亡後は現在の${ratio}%で計算`;
@@ -5399,7 +5421,7 @@ function renderContingency(){
   let sav=initSav;
   const MR={yr:[],hA:[],wA:[],
     hInc:[],wInc:[],survPension:[],insPayArr:[],otherInc:[],incT:[],
-    lc:[],lRep:[],expT:[],bal:[],sav:[],lBal:[],
+    lc:[],lRep:[],carTotal:[],prk:[],expT:[],bal:[],sav:[],lBal:[],
     needCoverage:0};
 
   const hSteps=getIncomeSteps('h');
@@ -5488,7 +5510,8 @@ function renderContingency(){
       else pSelfVal=0;
     }
 
-    const incTotal=ri(hInc)+ri(wInc)+rPayVal+insPayVal+survP+oiVal+teateVal+lctrlVal+pSelfVal+pWifeVal;
+    const scholarVal=i<normalR.scholarship.length?(normalR.scholarship[i]||0):0;
+    const incTotal=ri(hInc)+ri(wInc)+rPayVal+insPayVal+survP+oiVal+teateVal+lctrlVal+pSelfVal+pWifeVal+scholarVal;
     MR.incT.push(incTotal);
 
     // ── 支出 ──
@@ -5527,11 +5550,18 @@ function renderContingency(){
     }
     MR.lRep.push(lRep);
 
-    // その他支出（通常と同じ分を引用、生活費とローン以外）
-    const normalExpOther=(i<normalR.expT.length?normalR.expT[i]:0)
+    // その他支出（通常と同じ分を引用。車両・駐車場は個別制御）
+    const nCar=isDead&&!mgCarOn?0:(i<normalR.carTotal.length?(normalR.carTotal[i]||0):0);
+    const nPrk=isDead&&!mgParkOn?0:(i<normalR.prk.length?(normalR.prk[i]||0):0);
+    MR.carTotal.push(nCar);
+    MR.prk.push(nPrk);
+    // 通常のその他支出（生活費・ローン・車・駐車場を除く）
+    const normalExpBase=(i<normalR.expT.length?normalR.expT[i]:0)
       -(i<normalR.lc.length?normalR.lc[i]:0)
-      -(i<normalR.lRep.length?normalR.lRep[i]:0);
-    const expTotal=lcVal+lRep+Math.max(0,normalExpOther);
+      -(i<normalR.lRep.length?normalR.lRep[i]:0)
+      -(i<normalR.carTotal.length?(normalR.carTotal[i]||0):0)
+      -(i<normalR.prk.length?(normalR.prk[i]||0):0);
+    const expTotal=lcVal+lRep+nCar+nPrk+Math.max(0,normalExpBase);
     MR.expT.push(expTotal);
 
     // 収支・残高
@@ -5653,8 +5683,9 @@ function renderContingency(){
   });
   const rPayNormal=N.hInc.map((_,i)=>(N.rPay[i]||0)+(N.wRPay[i]||0));
   h+=mgRow('退職金',rPayMG,rPayNormal);
-  h+=mgRow('死亡保険金',MR.insPayArr);// 新規項目なのでハイライトなし
+  h+=mgRow('死亡保険金',MR.insPayArr);
   h+=mgRow('遺族年金',MR.survPension,N.survPension);
+  h+=mgRow('奨学金',N.scholarship);
   h+=mgRow('児童手当',N.teate);
   h+=mgRow('住宅ローン控除',N.lCtrl);
   // 収入合計
@@ -5699,8 +5730,8 @@ function renderContingency(){
       h+=`<td class="${cls}">${v>0?ri(v).toLocaleString():'-'}</td>`;
     }h+=`<td>${ri(tot).toLocaleString()}</td></tr>`;
   });
-  h+=mgERow('駐車場代',N.prk);
-  h+=mgERow('車両費（購入・車検）',N.carTotal);
+  h+=mgERow('駐車場代',MR.prk,N.prk);
+  h+=mgERow('車両費（購入・車検）',MR.carTotal,N.carTotal);
   h+=mgERow('結婚のお祝い',N.wedding);
   h+=mgERow('特別支出',N.ext);
 
