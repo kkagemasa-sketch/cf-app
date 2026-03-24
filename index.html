@@ -508,14 +508,15 @@ function checkPW(){
   const pw=document.getElementById('pw-input').value;
   if(pw==='housingfp0401'){
     document.getElementById('pw-lock').style.display='none';
-    sessionStorage.setItem('cf-auth','1');
+    const d=new Date();d.setDate(d.getDate()+30);
+    document.cookie='cf-auth=1;expires='+d.toUTCString()+';path=/;SameSite=Strict';
   }else{
     document.getElementById('pw-err').textContent='パスワードが違います';
     document.getElementById('pw-input').style.borderColor='#d63a2a';
   }
 }
-// セッション中は再入力不要
-if(sessionStorage.getItem('cf-auth')==='1'){
+// 30日間記憶（Cookie）
+if(document.cookie.includes('cf-auth=1')){
   document.addEventListener('DOMContentLoaded',()=>{document.getElementById('pw-lock').style.display='none';});
 }
 </script>
