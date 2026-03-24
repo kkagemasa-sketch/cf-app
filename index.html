@@ -532,15 +532,16 @@ function checkPW(){
   const pw=document.getElementById('pw-input').value;
   if(pw==='0401'){
     document.getElementById('pw-lock').style.display='none';
-    const d=new Date();d.setDate(d.getDate()+30);
-    document.cookie='cf-auth=1;expires='+d.toUTCString()+';path=/;SameSite=Strict';
+    const exp=Date.now()+30*24*60*60*1000;
+    localStorage.setItem('cf-auth-exp',exp);
   }else{
     document.getElementById('pw-err').textContent='パスワードが違います';
     document.getElementById('pw-input').style.borderColor='#d63a2a';
   }
 }
-// 30日間記憶（Cookie）
-if(document.cookie.includes('cf-auth=1')){
+// 30日間記憶（localStorage）
+const authExp=localStorage.getItem('cf-auth-exp');
+if(authExp&&Date.now()<Number(authExp)){
   document.addEventListener('DOMContentLoaded',()=>{document.getElementById('pw-lock').style.display='none';});
 }
 </script>
