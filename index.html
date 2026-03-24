@@ -1594,6 +1594,8 @@ if(authExp&&Date.now()<Number(authExp)){
     <div style="display:flex;gap:4px">
       <button class="rtab on" id="rt-cf" onclick="setRTab('cf')">📋 CF表</button>
       <button class="rtab" id="rt-graph" onclick="setRTab('graph')">📈 グラフ</button>
+      <button class="rtab" id="rt-mg-h" onclick="setRTab('mg-h')" style="display:none">🛡️ 万が一（ご主人様）</button>
+      <button class="rtab" id="rt-mg-w" onclick="setRTab('mg-w')" style="display:none">🛡️ 万が一（奥様）</button>
     </div>
     <div style="display:flex;align-items:center;gap:8px;padding-right:10px;padding-bottom:4px">
       <button id="btn-fin-toggle" onclick="toggleFinAsset()"
@@ -2974,6 +2976,17 @@ function setRTab(t){
   rTab=t;
   $('rt-cf')?.classList.toggle('on',t==='cf');
   $('rt-graph')?.classList.toggle('on',t==='graph');
+  $('rt-mg-h')?.classList.toggle('on',t==='mg-h');
+  $('rt-mg-w')?.classList.toggle('on',t==='mg-w');
+  if(t==='mg-h'||t==='mg-w'){
+    const key=t==='mg-h'?'h':'w';
+    const html=window._mgStore&&window._mgStore[key];
+    if(html){
+      const _rb=$('right-body');
+      _rb.innerHTML=html;
+    }
+    return;
+  }
   render();
 }
 
@@ -4036,13 +4049,9 @@ function renderTable(R,total,disp,cLbls,cYear,loanAmt,isM,hAge,retAge,children,d
   const _prevLeft=_rb?_rb.scrollLeft:0;
   _rb.innerHTML=h;
 
-  // 万が一CF表が生成済みなら通常CF表の下に追加
-  if(window._mgHTML){
-    const mgDiv=document.createElement('div');
-    mgDiv.id='mg-cf-section';
-    mgDiv.innerHTML=window._mgHTML;
-    _rb.appendChild(mgDiv);
-  }
+  // 万が一タブが存在すればタブボタンを表示維持
+  if(window._mgStore?.h)$('rt-mg-h').style.display='';
+  if(window._mgStore?.w)$('rt-mg-w').style.display='';
 
   if(_rb&&(_prevTop>0||_prevLeft>0)){_rb.scrollTop=_prevTop;_rb.scrollLeft=_prevLeft;}
   _applyFinAssetVisibility();
@@ -5857,18 +5866,19 @@ function renderContingency(){
   h+=`</table></div>`;
   h+=`</div>`;
 
-  // HTMLをグローバルに保存（次回render()で自動追加される）
-  window._mgHTML=h;
+  // タブ別に保存
+  if(!window._mgStore)window._mgStore={};
+  const mgKey=targetIsH?'h':'w';
+  window._mgStore[mgKey]=h;
   window.lastMR=MR;
+  window._mgHTML=null; // CF表タブに追加しない
 
-  // 即座にDOMに追加
-  const _rb=$('right-body');
-  const existingMG=document.getElementById('mg-cf-section');
-  if(existingMG)existingMG.remove();
-  const mgDiv=document.createElement('div');
-  mgDiv.id='mg-cf-section';
-  mgDiv.innerHTML=h;
-  _rb.appendChild(mgDiv);
+  // タブボタンを表示
+  const tabId=targetIsH?'rt-mg-h':'rt-mg-w';
+  $(tabId).style.display='';
+
+  // 自動でそのタブに切り替え
+  setRTab(targetIsH?'mg-h':'mg-w');
 }
 </script>
 </body>
