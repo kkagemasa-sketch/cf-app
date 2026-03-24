@@ -506,7 +506,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Yu Gothic UI','Mei
 <script>
 function checkPW(){
   const pw=document.getElementById('pw-input').value;
-  if(pw==='housingfp0401'){
+  if(pw==='0401'){
     document.getElementById('pw-lock').style.display='none';
     const d=new Date();d.setDate(d.getDate()+30);
     document.cookie='cf-auth=1;expires='+d.toUTCString()+';path=/;SameSite=Strict';
