@@ -4242,8 +4242,12 @@ function exportExcel(){
       }
       // title行：データ範囲外は塗りつぶしなし
       if(tp==='title'&&c>=3){cell._noFill=true;}
-      // title行の物件タイプ（2列目）
-      if(tp==='title'&&c===1){fObj.sz=10;}
+      // title行の物件タイプ（C列）中央揃え
+      if(tp==='title'&&c===2){fObj.sz=10;}
+      // title行：データ範囲外は罫線なし
+      if(tp==='title'&&c>=4){cell._noBorder=true;cell._noFill=true;}
+      // info行：データ範囲外は罫線なし
+      if(tp==='info'&&cell._noFill){cell._noBorder=true;}
       // 年間収支の赤/緑
       if(tp==='balance'&&c>=2&&typeof cell.v==='number'){
         fObj.color={rgb:cell.v<0?C.red:'FF0d8a20'};
@@ -4272,7 +4276,7 @@ function exportExcel(){
         }
       }
       // ボーダー（blank/footer行はボーダーなし）
-      const noBorder=def.noBorder||false;
+      const noBorder=def.noBorder||cell._noBorder||false;
       const border=noBorder?{}:{...baseBorder};
       if(!noBorder&&isFixed&&c===1){border.right=bdrH;}
 
@@ -4282,6 +4286,8 @@ function exportExcel(){
         : (c>=2?'right':'left');
       // footer行：すべて左寄せ
       if(tp==='footer'){hAlign='left';}
+      // title行C列（マンション/戸建て）：中央揃え
+      if(tp==='title'&&c===2){hAlign='center';}
       let cellFill=isLastCol&&lastFill?lastFill:fillObj;
 
       // 子どもイベント行：教育段階ごとの色分け
