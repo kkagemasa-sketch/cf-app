@@ -3942,24 +3942,23 @@ function renderTable(R,total,disp,cLbls,cYear,loanAmt,isM,hAge,retAge,children,d
     <div class="pf-notes">${pi.notes.filter(n=>n.trim()).map(n=>`<div>・${n}</div>`).join('')}</div>
   </div>`;
 
-  // 万が一CF表が生成済みなら通常CF表の下に追加
-  if(window._mgHTML){
-    h+=window._mgHTML;
-  }
-
   // スクロール位置を保存してからDOM置換 → 復元（ユーザーの手動スクロールを守る）
   const _rb=$('right-body');
   const _prevTop=_rb?_rb.scrollTop:0;
   const _prevLeft=_rb?_rb.scrollLeft:0;
   _rb.innerHTML=h;
+
+  // 万が一CF表が生成済みなら通常CF表の下に追加（グラフは再描画しない）
+  if(window._mgHTML){
+    const mgDiv=document.createElement('div');
+    mgDiv.id='mg-cf-section';
+    mgDiv.innerHTML=window._mgHTML;
+    _rb.appendChild(mgDiv);
+  }
+
   if(_rb&&(_prevTop>0||_prevLeft>0)){_rb.scrollTop=_prevTop;_rb.scrollLeft=_prevLeft;}
   _applyFinAssetVisibility();
   _reapplyHighlightAfterRender();
-
-  // 万が一の比較グラフを再描画
-  if(window._mgHTML&&window.lastMR){
-    _drawMGChart(window.lastMR, R, disp);
-  }
 }
 
 // ===== グラフ =====
