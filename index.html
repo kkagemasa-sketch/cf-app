@@ -317,28 +317,46 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Yu Gothic UI','Mei
    ============================================================ */
 .print-footer{display:none}
 
+@page{size:A4 landscape;margin:8mm 6mm}
+
 @media print{
-  html,body{height:auto;overflow:visible}
-  .hdr,.panel-l,.r-tabs,.btn-h,.btn-add,.btn-rm{display:none!important}
+  html,body{height:auto;overflow:visible;font-size:7px}
+  .hdr,.panel-l,.r-tabs,.btn-h,.btn-add,.btn-rm,.cf-summary{display:none!important}
+  #pw-lock{display:none!important}
   .layout{display:block}
   .panel-r{overflow:visible}
-  .r-body{overflow:visible;padding:8px}
-  .tbl-wrap{overflow:visible;box-shadow:none}
+  .r-body{overflow:visible;padding:4px}
+
+  /* CF表をページ幅に収める */
+  .tbl-wrap{overflow:visible;box-shadow:none;border:none}
+  .cf{font-size:6.5px;table-layout:auto;width:100%}
+  .cf th,.cf td{padding:1.5px 3px;min-width:auto;width:auto;white-space:nowrap;border-right:0.5px solid #ccd4e0;border-bottom:0.5px solid #ccd4e0}
+  .cf th:first-child,.cf td:first-child{position:static;min-width:auto;max-width:none;font-size:6.5px}
+  .cf th:nth-child(2),.cf td:nth-child(2){position:static;min-width:auto;max-width:none;font-size:6.5px;border-right:1.5px solid #6b8cae!important;box-shadow:none}
+  .cf th:last-child,.cf tr:not(.ryr) td:last-child{min-width:auto;width:auto;padding:1.5px 4px!important;border-left:2px solid rgba(0,0,0,.15)!important}
+
+  /* 前提条件バー */
+  div[style*="border:1.5px solid #c8d6e8"]{font-size:7px;overflow:visible}
+
+  /* 色を印刷に反映 */
+  -webkit-print-color-adjust:exact;print-color-adjust:exact;color-adjust:exact;
+
+  /* 印刷フッター */
   .print-footer{
     display:flex!important;
     justify-content:space-between;
     align-items:flex-start;
-    margin-top:12px;
-    padding:8px 12px;
-    border-top:1.5px solid #94a3b8;
-    font-size:9px;
+    margin-top:8px;
+    padding:6px 8px;
+    border-top:1px solid #94a3b8;
+    font-size:7px;
     color:#475569;
-    line-height:1.8;
-    gap:16px;
+    line-height:1.7;
+    gap:12px;
     page-break-inside:avoid
   }
   .pf-left{flex:1}
-  .pf-notes{flex:1.5;font-size:9px;color:#64748b;line-height:1.9}
+  .pf-notes{flex:1.5;font-size:7px;color:#64748b;line-height:1.7}
 }
 
 /* ============================================================
@@ -3597,7 +3615,7 @@ function renderTable(R,total,disp,cLbls,cYear,loanAmt,isM,hAge,retAge,children,d
       ${sub?`<div style="font-size:9px;color:var(--muted);margin-top:1px">${sub}</div>`:''}
     </div>
   </div>`;
-  let h=`<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+  let h=`<div class="cf-summary" style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
     ${sc('💰','総収入',ri(totI_s).toLocaleString(),'万円','#2d7dd2',`${disp}年間合計`)}
     ${sc('💸','総支出',ri(totE_s).toLocaleString(),'万円','#fc5b4a',`${disp}年間合計`)}
     ${sc('🏦','最終残高',ri(finSav_s).toLocaleString(),'万円',finSav_s>=0?'#0d8a20':'#d63a2a',`${hAge+disp-1}歳時点`)}
