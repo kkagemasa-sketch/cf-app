@@ -4140,13 +4140,11 @@ function exportExcel(){
   const headerRowIdx=types.indexOf('header');
   ws['!freeze']={xSplit:2,ySplit:headerRowIdx+1,topLeftCell:XLSX.utils.encode_cell({r:headerRowIdx+1,c:2}),state:'frozen'};
 
-  // ── 印刷設定：A4・横向き・全列を1ページ幅に収める ──
+  // ── 印刷設定：A4・横向き・全行1ページ・拡大73% ──
   ws['!pageSetup']={
     paperSize:9,
     orientation:'landscape',
-    fitToPage:true,
-    fitToWidth:1,
-    fitToHeight:0
+    scale:73
   };
   ws['!margins']={left:0.3,right:0.3,top:0.4,bottom:0.6,header:0.2,footer:0.3};
 
