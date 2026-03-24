@@ -1476,32 +1476,35 @@ if(authExp&&Date.now()<Number(authExp)){
 
       <div class="divider"></div>
 
-      <!-- 車両・駐車場 -->
-      <div class="sub">🚗 車両費・駐車場</div>
-      <div class="g2">
-        <div class="fg"><label class="lbl">車両費</label>
-          <div style="display:flex;gap:6px">
-            <button class="btn-tog on" id="mg-car-yes" onclick="setMGCar(true)">継続</button>
-            <button class="btn-tog" id="mg-car-no" onclick="setMGCar(false)">なし</button>
-          </div>
-        </div>
-        <div class="fg"><label class="lbl">駐車場代</label>
-          <div style="display:flex;gap:6px">
-            <button class="btn-tog on" id="mg-park-yes" onclick="setMGPark(true)">継続</button>
-            <button class="btn-tog" id="mg-park-no" onclick="setMGPark(false)">なし</button>
-          </div>
-        </div>
-      </div>
-
-      <div class="divider"></div>
-
       <!-- 生活費の変化 -->
       <div class="sub">🏠 死亡後の生活費</div>
-      <div class="g2">
-        <div class="fg"><label class="lbl">生活費の割合</label>
-          <div class="suf"><input class="inp" id="mg-lc-ratio" type="number" value="70" min="10" max="100" oninput="live()"><span class="sl">%</span></div></div>
-        <div class="fg"><label class="lbl">&nbsp;</label>
-          <span class="hint ok" id="mg-lc-hint">✓ 死亡後は現在の70%で計算</span></div>
+      <div style="display:flex;gap:4px;margin-bottom:8px">
+        <button type="button" class="btn-tog act" onclick="this.classList.add('act');this.nextElementSibling.classList.remove('act');document.getElementById('mg-lc-ratio-fields').style.display='';document.getElementById('mg-lc-step-fields').style.display='none';live()" id="mg-lc-mode-ratio">割合で設定</button>
+        <button type="button" class="btn-tog" onclick="this.classList.add('act');this.previousElementSibling.classList.remove('act');document.getElementById('mg-lc-ratio-fields').style.display='none';document.getElementById('mg-lc-step-fields').style.display='';live()" id="mg-lc-mode-step">段階で設定</button>
+      </div>
+      <div id="mg-lc-ratio-fields">
+        <div class="g2">
+          <div class="fg"><label class="lbl">生活費の割合</label>
+            <div class="suf"><input class="inp" id="mg-lc-ratio" type="number" value="70" min="10" max="100" oninput="live()"><span class="sl">%</span></div></div>
+          <div class="fg"><label class="lbl">&nbsp;</label>
+            <span class="hint ok" id="mg-lc-hint">✓ 死亡後は現在の70%で計算</span></div>
+        </div>
+      </div>
+      <div id="mg-lc-step-fields" style="display:none">
+        <div id="mg-lc-steps-container">
+          <div class="mg-lc-step" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:8px;margin-bottom:6px">
+            <div style="font-size:10px;font-weight:600;color:#64748b;margin-bottom:4px">段階1</div>
+            <div class="g3">
+              <div class="fg"><label class="lbl">金額</label>
+                <div class="suf"><input class="inp amt-inp" id="mg-lsb-1" type="number" value="" placeholder="万円/年" min="0" oninput="live()"><span class="sl">万円/年</span></div></div>
+              <div class="fg"><label class="lbl">上昇率</label>
+                <div class="suf"><input class="inp" id="mg-lsr-1" type="number" value="0" step="0.1" oninput="live()"><span class="sl">%/年</span></div></div>
+              <div class="fg"><label class="lbl">終了年</label>
+                <div class="suf"><input class="inp age-inp" id="mg-lst-1" type="number" value="" placeholder="空欄=ずっと" min="1" oninput="live()"><span class="sl">年後</span></div></div>
+            </div>
+          </div>
+        </div>
+        <button class="btn-add" onclick="addMGLCStep()" style="font-size:11px;padding:4px 10px">＋ 段階を追加</button>
       </div>
 
       <div class="divider"></div>
@@ -5437,6 +5440,44 @@ function updateMGHints(){
   const ratio=parseInt($('mg-lc-ratio')?.value)||70;
   $('mg-lc-hint').textContent=`✓ 死亡後は現在の${ratio}%で計算`;
 }
+// 万が一生活費の段階設定
+let _mgLCStepCount=1;
+function addMGLCStep(){
+  _mgLCStepCount++;
+  const n=_mgLCStepCount;
+  const cont=document.getElementById('mg-lc-steps-container');
+  const d=document.createElement('div');
+  d.className='mg-lc-step';
+  d.style.cssText='background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:8px;margin-bottom:6px';
+  d.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+    <span style="font-size:10px;font-weight:600;color:#64748b">段階${n}</span>
+    <button onclick="this.parentElement.parentElement.remove()" style="background:#fee;color:#d63a2a;border:1px solid #fca;border-radius:6px;padding:2px 8px;cursor:pointer;font-size:11px">✕</button>
+  </div>
+  <div class="g3">
+    <div class="fg"><label class="lbl">金額</label>
+      <div class="suf"><input class="inp amt-inp" id="mg-lsb-${n}" type="number" value="" placeholder="万円/年" min="0" oninput="live()"><span class="sl">万円/年</span></div></div>
+    <div class="fg"><label class="lbl">上昇率</label>
+      <div class="suf"><input class="inp" id="mg-lsr-${n}" type="number" value="0" step="0.1" oninput="live()"><span class="sl">%/年</span></div></div>
+    <div class="fg"><label class="lbl">終了年</label>
+      <div class="suf"><input class="inp age-inp" id="mg-lst-${n}" type="number" value="" placeholder="空欄=ずっと" min="1" oninput="live()"><span class="sl">年後</span></div></div>
+  </div>`;
+  cont.appendChild(d);
+}
+function getMGLCSteps(){
+  const steps=[];
+  document.querySelectorAll('.mg-lc-step').forEach(el=>{
+    const inputs=el.querySelectorAll('input');
+    if(inputs.length>=3){
+      steps.push({
+        base:parseFloat(inputs[0].value)||0,
+        rate:parseFloat(inputs[1].value)||0,
+        endYr:parseInt(inputs[2].value)||0
+      });
+    }
+  });
+  return steps;
+}
+function getMGLCMode(){return document.getElementById('mg-lc-mode-step')?.classList.contains('act')?'step':'ratio';}
 function getMGInsuranceTotal(){
   let total=0;
   document.querySelectorAll('[id^="mg-ins-amt-"]').forEach(el=>{total+=(parseFloat(el.value)||0);});
@@ -5467,7 +5508,9 @@ function renderContingency(){
   const lhYrs=iv('loan-h-yrs')||35, lwYrs=iv('loan-w-yrs')||35;
   const rates=getRates();
   const rHBase=fv('rate-h-base')||0.5, rWBase=fv('rate-w-base')||0.5;
+  const mgLCMode=getMGLCMode();
   const lcRatio=(parseInt($('mg-lc-ratio')?.value)||70)/100;
+  const mgLCSteps=mgLCMode==='step'?getMGLCSteps():[];
   const mgCarKeep=getMGCarOn();
   const mgParkKeep=getMGParkOn();
   const mgScholarOn=document.getElementById('mg-scholarship-yes')?.classList.contains('act');
@@ -5601,9 +5644,34 @@ function renderContingency(){
     MR.incT.push(incTotal);
 
     // ── 支出 ──
-    // 生活費（死亡後は割合適用）
+    // 生活費（死亡後）
     const normalLC=i<normalR.lc.length?normalR.lc[i]:0;
-    const lcVal=isDead?ri(normalLC*lcRatio):normalLC;
+    let lcVal=normalLC;
+    if(isDead){
+      if(mgLCMode==='step'&&mgLCSteps.length>0){
+        // 段階設定モード：死亡後の経過年で段階を判定
+        const yrsAfterDeath=i-(deathYearOffset-1)+1;
+        let cumYr=0, found=false;
+        for(const st of mgLCSteps){
+          const endY=st.endYr||9999;
+          if(yrsAfterDeath>cumYr&&yrsAfterDeath<=cumYr+endY){
+            const yrInStep=yrsAfterDeath-cumYr-1;
+            lcVal=ri(st.base*Math.pow(1+st.rate/100,yrInStep));
+            found=true;break;
+          }
+          cumYr+=endY;
+        }
+        if(!found){
+          const last=mgLCSteps[mgLCSteps.length-1];
+          const totalPrev=mgLCSteps.slice(0,-1).reduce((s,st)=>s+(st.endYr||9999),0);
+          const yrInLast=yrsAfterDeath-totalPrev-1;
+          lcVal=ri(last.base*Math.pow(1+last.rate/100,Math.max(0,yrInLast)));
+        }
+      }else{
+        // 割合モード
+        lcVal=ri(normalLC*lcRatio);
+      }
+    }
     MR.lc.push(lcVal);
 
     // ローン返済（団信適用）
