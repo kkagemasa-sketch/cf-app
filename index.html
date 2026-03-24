@@ -4009,8 +4009,10 @@ function exportExcel(){
   const deliveryYrV=iv('delivery-year')||0;
   const emptyFill=Array(disp-1).fill('');
 
-  // お客様名（左上）- A+B結合
-  push([`${clientName} 様`,'',isM?'マンション':'戸建て',...emptyFill.slice(0,Math.max(0,disp-1)),'',''],'title');
+  // お客様名（左上）- A+B結合、C+D結合で物件タイプ
+  const titleRow=[`${clientName} 様`,'',isM?'マンション':'戸建て',''];
+  while(titleRow.length<disp+3)titleRow.push('');
+  push(titleRow,'title');
 
   // 頭金の内訳 - A+B結合
   const infoRow1=['💰 頭金の内訳','','現預金合計',`${cashTotal}万円`,'',downType==='gift'?'頭金（贈与）':'頭金（自己資金）',`${downPay}万円`,'','諸費用',`${houseCostV}万円`,'','引越・家具',`${(movingCostV+furnitureInitV)}万円`,'','購入後残高',`${cashAfter}万円`];
@@ -4128,8 +4130,9 @@ function exportExcel(){
 
   // セル結合
   if(!ws['!merges'])ws['!merges']=[];
-  // title行(row0)のA+B結合
+  // title行(row0)のA+B結合、C+D結合（物件タイプ）
   ws['!merges'].push({s:{r:0,c:0},e:{r:0,c:1}});
+  ws['!merges'].push({s:{r:0,c:2},e:{r:0,c:3}});
   // info行(row1,row2)のA+B結合
   const infoRowIndices=[];
   types.forEach((t,i)=>{if(t==='info')infoRowIndices.push(i);});
