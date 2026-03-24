@@ -114,6 +114,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Yu Gothic UI','Mei
 .tc-lbl{font-size:12px;font-weight:700}
 .tc-desc{font-size:10px;color:var(--muted);margin-top:1px}
 
+/* トグルボタン（万が一シミュレーション等） */
+.btn-tog{padding:6px 14px;border:2px solid var(--border);border-radius:var(--r);background:var(--card);color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;transition:.15s;font-family:inherit}
+.btn-tog:hover{border-color:var(--navy-l);background:#f0f4f8}
+.btn-tog.on{border-color:var(--navy);background:#eef2f7;color:var(--navy)}
+/* 万が一CF表の変更セル */
+.mg-changed{background:rgba(194,24,91,.08)!important;border-bottom:2px solid #c2185b!important}
+.mg-zero{background:rgba(194,24,91,.05)!important;color:#c2185b!important;font-weight:600}
+
 /* エラーバナー */
 .err-bar{background:var(--red-bg);border:1.5px solid #fca5a5;border-radius:var(--rs);padding:8px 12px;margin-bottom:9px;display:none}
 .err-bar.show{display:block}
@@ -5560,7 +5568,6 @@ function renderContingency(){
   </div>`;
 
   // CF表テーブル（通常CF表と同じ構造）
-  const isM=ST.type==='mansion';
   const cLbls=['第一子','第二子','第三子','第四子'];
   const N=normalR;// 通常データの参照用
 
@@ -5610,13 +5617,25 @@ function renderContingency(){
     }h+=`<td></td></tr>`;
   });
 
-  // ─ 収入 ─
+  // ─ 収入 ─（通常との差分をハイライト）
   h+=`<tr class="rcat inc-cat"><td></td><td>収　　入</td>`;for(let i=0;i<mgDisp;i++)h+=`<td></td>`;h+=`<td></td></tr>`;
-  const mgRow=(lbl,arr)=>{const tot=arr.slice(0,mgDisp).reduce((a,b)=>a+b,0);if(tot===0)return'';let r=`<tr class="rinc"><td></td><td>${lbl}</td>`;for(let i=0;i<mgDisp;i++){const v=arr[i]||0;r+=`<td class="${v===0?'vz':''}">${v>0?ri(v).toLocaleString():'-'}</td>`;}return r+`<td>${ri(tot).toLocaleString()}</td></tr>`;};
+  // mgRow: normalArr（通常の値）と比較して差分をハイライト。行が0でも通常が0でなければ表示
+  const mgRow=(lbl,arr,normalArr)=>{
+    const tot=arr.slice(0,mgDisp).reduce((a,b)=>a+b,0);
+    const nTot=normalArr?normalArr.slice(0,mgDisp).reduce((a,b)=>a+b,0):0;
+    if(tot===0&&nTot===0)return'';// 両方0なら非表示
+    let r=`<tr class="rinc"><td></td><td>${lbl}</td>`;
+    for(let i=0;i<mgDisp;i++){
+      const v=arr[i]||0;const nv=normalArr?(normalArr[i]||0):0;
+      const changed=normalArr&&v!==nv;
+      const cls=changed?(v===0?'mg-zero':'mg-changed'):(v===0?'vz':'');
+      r+=`<td class="${cls}">${v>0?ri(v).toLocaleString():(changed?'0':'-')}</td>`;
+    }
+    return r+`<td>${ri(tot).toLocaleString()}</td></tr>`;
+  };
 
-  h+=mgRow('ご主人手取年収',MR.hInc);
-  h+=mgRow('奥様手取年収',MR.wInc);
-  // その他収入（通常と同じ）
+  h+=mgRow('ご主人手取年収',MR.hInc,N.hInc);
+  h+=mgRow('奥様手取年収',MR.wInc,N.wInc);
   h+=mgRow('副業・その他収入',N.otherInc);
   h+=mgRow('保険満期金',N.insMat);
   if(N.secRedeemRows)N.secRedeemRows.forEach(row=>{h+=mgRow(row.lbl,row.vals);});
@@ -5630,25 +5649,41 @@ function renderContingency(){
     else{if(ha===retPayAge2)v+=ri(fv('retire-pay'));if(!(i>=deathYearOffset-1)&&wa===wRetPayAge2)v+=ri(fv('w-retire-pay'));}
     return v;
   });
-  h+=mgRow('退職金',rPayMG);
-  h+=mgRow('死亡保険金',MR.insPayArr);
-  h+=mgRow('遺族年金',MR.survPension);
+  const rPayNormal=N.hInc.map((_,i)=>(N.rPay[i]||0)+(N.wRPay[i]||0));
+  h+=mgRow('退職金',rPayMG,rPayNormal);
+  h+=mgRow('死亡保険金',MR.insPayArr);// 新規項目なのでハイライトなし
+  h+=mgRow('遺族年金',MR.survPension,N.survPension);
   h+=mgRow('児童手当',N.teate);
   h+=mgRow('住宅ローン控除',N.lCtrl);
   // 収入合計
   h+=`<tr class="rinct"><td>収入合計</td><td></td>`;
-  for(let i=0;i<mgDisp;i++)h+=`<td>${ri(MR.incT[i]).toLocaleString()}</td>`;
+  for(let i=0;i<mgDisp;i++){
+    const changed=ri(MR.incT[i])!==ri(N.incT[i]);
+    h+=`<td class="${changed?'mg-changed':''}">${ri(MR.incT[i]).toLocaleString()}</td>`;
+  }
   h+=`<td>${ri(MR.incT.slice(0,mgDisp).reduce((a,b)=>a+b,0)).toLocaleString()}</td></tr>`;
 
-  // ─ 支出 ─
+  // ─ 支出 ─（通常との差分をハイライト）
   h+=`<tr class="rcat exp-cat"><td></td><td>支　　出</td>`;for(let i=0;i<mgDisp;i++)h+=`<td></td>`;h+=`<td></td></tr>`;
-  const mgERow=(lbl,arr)=>{const tot=arr.slice(0,mgDisp).reduce((a,b)=>a+b,0);if(tot===0)return'';let r=`<tr class="rexp"><td></td><td>${lbl}</td>`;for(let i=0;i<mgDisp;i++){const v=arr[i]||0;r+=`<td class="${v===0?'vz':''}">${v>0?ri(v).toLocaleString():'-'}</td>`;}return r+`<td>${ri(tot).toLocaleString()}</td></tr>`;};
+  const mgERow=(lbl,arr,normalArr)=>{
+    const tot=arr.slice(0,mgDisp).reduce((a,b)=>a+b,0);
+    const nTot=normalArr?normalArr.slice(0,mgDisp).reduce((a,b)=>a+b,0):0;
+    if(tot===0&&nTot===0)return'';
+    let r=`<tr class="rexp"><td></td><td>${lbl}</td>`;
+    for(let i=0;i<mgDisp;i++){
+      const v=arr[i]||0;const nv=normalArr?(normalArr[i]||0):0;
+      const changed=normalArr&&v!==nv;
+      const cls=changed?(v===0?'mg-zero':'mg-changed'):(v===0?'vz':'');
+      r+=`<td class="${cls}">${v>0?ri(v).toLocaleString():(changed?'0':'-')}</td>`;
+    }
+    return r+`<td>${ri(tot).toLocaleString()}</td></tr>`;
+  };
 
-  h+=mgERow('生活費',MR.lc);
+  h+=mgERow('生活費',MR.lc,N.lc);
   h+=mgERow('積立投資額',N.secInvest);
   h+=mgERow('一括投資額',N.secBuy);
   h+=mgERow('家賃（引渡前）',N.rent);
-  h+=mgERow('住宅ローン返済',MR.lRep);
+  h+=mgERow('住宅ローン返済',MR.lRep,N.lRep);
   if(isM)h+=mgERow('修繕積立金',N.rep);
   h+=mgERow('固定資産税',N.ptx);
   h+=mgERow('家具家電買替',N.furn);
@@ -5672,7 +5707,10 @@ function renderContingency(){
 
   // 支出合計
   h+=`<tr class="rexpt"><td>支出合計</td><td></td>`;
-  for(let i=0;i<mgDisp;i++)h+=`<td>${ri(MR.expT[i]).toLocaleString()}</td>`;
+  for(let i=0;i<mgDisp;i++){
+    const changed=ri(MR.expT[i])!==ri(N.expT[i]);
+    h+=`<td class="${changed?'mg-changed':''}">${ri(MR.expT[i]).toLocaleString()}</td>`;
+  }
   h+=`<td>${ri(MR.expT.slice(0,mgDisp).reduce((a,b)=>a+b,0)).toLocaleString()}</td></tr>`;
 
   // ─ 収支・残高 ─
