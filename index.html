@@ -1506,6 +1506,43 @@ if(authExp&&Date.now()<Number(authExp)){
 
       <div class="divider"></div>
 
+      <!-- 奨学金 -->
+      <div class="sub">🎓 奨学金</div>
+      <div class="g2">
+        <div class="fg"><label class="lbl">奨学金</label>
+          <div style="display:flex;gap:4px">
+            <button type="button" class="btn-tog" onclick="this.classList.add('act');this.nextElementSibling.classList.remove('act');document.getElementById('mg-scholarship-amt').parentElement.parentElement.style.display='none';live()" id="mg-scholarship-none">なし</button>
+            <button type="button" class="btn-tog act" onclick="this.classList.add('act');this.previousElementSibling.classList.remove('act');document.getElementById('mg-scholarship-amt').parentElement.parentElement.style.display='';live()" id="mg-scholarship-yes">あり</button>
+          </div></div>
+        <div class="fg"><label class="lbl">年額</label>
+          <div class="suf"><input class="inp" id="mg-scholarship-amt" type="number" value="0" min="0" oninput="live()"><span class="sl">万円/年</span></div></div>
+      </div>
+      <div class="g2">
+        <div class="fg"><label class="lbl">開始（子の年齢）</label>
+          <div class="suf"><input class="inp" id="mg-scholarship-from" type="number" value="18" min="0" oninput="live()"><span class="sl">歳</span></div></div>
+        <div class="fg"><label class="lbl">終了（子の年齢）</label>
+          <div class="suf"><input class="inp" id="mg-scholarship-to" type="number" value="22" min="0" oninput="live()"><span class="sl">歳</span></div></div>
+      </div>
+
+      <div class="divider"></div>
+
+      <!-- 車両費・駐車場 -->
+      <div class="sub">🚗 車両費・駐車場</div>
+      <div class="g2">
+        <div class="fg"><label class="lbl">車両費</label>
+          <div style="display:flex;gap:4px">
+            <button type="button" class="btn-tog act" onclick="this.classList.add('act');this.nextElementSibling.classList.remove('act');live()" id="mg-car-keep">継続</button>
+            <button type="button" class="btn-tog" onclick="this.classList.add('act');this.previousElementSibling.classList.remove('act');live()" id="mg-car-stop">なし</button>
+          </div></div>
+        <div class="fg"><label class="lbl">駐車場代</label>
+          <div style="display:flex;gap:4px">
+            <button type="button" class="btn-tog act" onclick="this.classList.add('act');this.nextElementSibling.classList.remove('act');live()" id="mg-park-keep">継続</button>
+            <button type="button" class="btn-tog" onclick="this.classList.add('act');this.previousElementSibling.classList.remove('act');live()" id="mg-park-stop">なし</button>
+          </div></div>
+      </div>
+
+      <div class="divider"></div>
+
       <!-- シミュレーション実行 -->
       <button class="btn-add" id="mg-run-btn" onclick="renderContingency()" style="background:#c2185b;color:#fff;border-color:#a01550;padding:8px 16px;font-size:12px;margin-top:8px;width:100%;border-radius:var(--r)">🛡️ 万が一CF表を生成</button>
 
@@ -3976,13 +4013,12 @@ function renderTable(R,total,disp,cLbls,cYear,loanAmt,isM,hAge,retAge,children,d
   const _prevLeft=_rb?_rb.scrollLeft:0;
   _rb.innerHTML=h;
 
-  // 万が一CF表が生成済みなら通常CF表の下に追加＋グラフ再描画
+  // 万が一CF表が生成済みなら通常CF表の下に追加
   if(window._mgHTML){
     const mgDiv=document.createElement('div');
     mgDiv.id='mg-cf-section';
     mgDiv.innerHTML=window._mgHTML;
     _rb.appendChild(mgDiv);
-    if(window.lastMR)_drawMGChart(window.lastMR, R, disp);
   }
 
   if(_rb&&(_prevTop>0||_prevLeft>0)){_rb.scrollTop=_prevTop;_rb.scrollLeft=_prevLeft;}
@@ -5358,8 +5394,8 @@ function addMGInsurance(){
   cont.appendChild(d);
 }
 let mgCarOn=true, mgParkOn=true;
-function setMGCar(on){mgCarOn=on;$('mg-car-yes').classList.toggle('on',on);$('mg-car-no').classList.toggle('on',!on);}
-function setMGPark(on){mgParkOn=on;$('mg-park-yes').classList.toggle('on',on);$('mg-park-no').classList.toggle('on',!on);}
+function getMGCarOn(){return document.getElementById('mg-car-keep')?.classList.contains('act')!==false;}
+function getMGParkOn(){return document.getElementById('mg-park-keep')?.classList.contains('act')!==false;}
 function updateMGHints(){
   const ratio=parseInt($('mg-lc-ratio')?.value)||70;
   $('mg-lc-hint').textContent=`✓ 死亡後は現在の${ratio}%で計算`;
@@ -5395,6 +5431,12 @@ function renderContingency(){
   const rates=getRates();
   const rHBase=fv('rate-h-base')||0.5, rWBase=fv('rate-w-base')||0.5;
   const lcRatio=(parseInt($('mg-lc-ratio')?.value)||70)/100;
+  const mgCarKeep=getMGCarOn();
+  const mgParkKeep=getMGParkOn();
+  const mgScholarOn=document.getElementById('mg-scholarship-yes')?.classList.contains('act');
+  const mgScholarAmt=mgScholarOn?(fv('mg-scholarship-amt')||0):0;
+  const mgScholarFrom=iv('mg-scholarship-from')||18;
+  const mgScholarTo=iv('mg-scholarship-to')||22;
   const insTotal=getMGInsuranceTotal();
   const pSelf=fv('pension-h')||186, pWife=fv('pension-w')||66;
   const pHReceive=iv('pension-h-receive')||65;
@@ -5420,7 +5462,7 @@ function renderContingency(){
 
   let sav=initSav;
   const MR={yr:[],hA:[],wA:[],
-    hInc:[],wInc:[],survPension:[],insPayArr:[],otherInc:[],incT:[],
+    hInc:[],wInc:[],survPension:[],insPayArr:[],otherInc:[],scholarship:[],incT:[],
     lc:[],lRep:[],carTotal:[],prk:[],expT:[],bal:[],sav:[],lBal:[],
     needCoverage:0};
 
@@ -5510,7 +5552,16 @@ function renderContingency(){
       else pSelfVal=0;
     }
 
-    const scholarVal=i<normalR.scholarship.length?(normalR.scholarship[i]||0):0;
+    // 奨学金：通常分 + 万が一追加分
+    let scholarVal=i<normalR.scholarship.length?(normalR.scholarship[i]||0):0;
+    if(isDead&&mgScholarAmt>0){
+      // 第一子の年齢で判定
+      const firstChildAge=children.length>0?(children[0].age+i):99;
+      if(firstChildAge>=mgScholarFrom&&firstChildAge<=mgScholarTo){
+        scholarVal+=mgScholarAmt;
+      }
+    }
+    MR.scholarship.push(scholarVal);
     const incTotal=ri(hInc)+ri(wInc)+rPayVal+insPayVal+survP+oiVal+teateVal+lctrlVal+pSelfVal+pWifeVal+scholarVal;
     MR.incT.push(incTotal);
 
@@ -5551,8 +5602,8 @@ function renderContingency(){
     MR.lRep.push(lRep);
 
     // その他支出（通常と同じ分を引用。車両・駐車場は個別制御）
-    const nCar=isDead&&!mgCarOn?0:(i<normalR.carTotal.length?(normalR.carTotal[i]||0):0);
-    const nPrk=isDead&&!mgParkOn?0:(i<normalR.prk.length?(normalR.prk[i]||0):0);
+    const nCar=isDead&&!mgCarKeep?0:(i<normalR.carTotal.length?(normalR.carTotal[i]||0):0);
+    const nPrk=isDead&&!mgParkKeep?0:(i<normalR.prk.length?(normalR.prk[i]||0):0);
     MR.carTotal.push(nCar);
     MR.prk.push(nPrk);
     // 通常のその他支出（生活費・ローン・車・駐車場を除く）
@@ -5685,7 +5736,7 @@ function renderContingency(){
   h+=mgRow('退職金',rPayMG,rPayNormal);
   h+=mgRow('死亡保険金',MR.insPayArr);
   h+=mgRow('遺族年金',MR.survPension,N.survPension);
-  h+=mgRow('奨学金',N.scholarship);
+  h+=mgRow('奨学金',MR.scholarship,N.scholarship);
   h+=mgRow('児童手当',N.teate);
   h+=mgRow('住宅ローン控除',N.lCtrl);
   // 収入合計
@@ -5750,12 +5801,6 @@ function renderContingency(){
   h+=`<td>${ri(MR.sav[mgDisp-1]).toLocaleString()}</td></tr>`;
 
   h+=`</table></div>`;
-
-  // 通常CFとの比較グラフ
-  h+=`<div style="margin-top:16px;padding:12px;background:#f8fafc;border-radius:10px;border:1px solid #e2e8f0">
-    <div style="font-size:12px;font-weight:700;color:#1e3a5f;margin-bottom:8px">📊 預貯金残高の比較（通常 vs 万が一）</div>
-    <canvas id="mg-compare-chart" height="200"></canvas>
-  </div>`;
   h+=`</div>`;
 
   // HTMLをグローバルに保存（次回render()で自動追加される）
@@ -5770,38 +5815,6 @@ function renderContingency(){
   mgDiv.id='mg-cf-section';
   mgDiv.innerHTML=h;
   _rb.appendChild(mgDiv);
-
-  // グラフ描画
-  _drawMGChart(MR, normalR, mgDisp);
-}
-
-// 万が一比較グラフ描画（render()から呼ばれる）
-function _drawMGChart(MR, normalR, mgDisp){
-  setTimeout(()=>{
-    const ctx=document.getElementById('mg-compare-chart');
-    if(!ctx)return;
-    if(window._mgChart)window._mgChart.destroy();
-    const labels=MR.yr.slice(0,mgDisp).map(String);
-    window._mgChart=new Chart(ctx,{
-      type:'line',
-      data:{
-        labels,
-        datasets:[
-          {label:'通常',data:normalR.sav.slice(0,mgDisp),borderColor:'#2d7dd2',backgroundColor:'rgba(45,125,210,.1)',fill:true,tension:.3,pointRadius:0,borderWidth:2},
-          {label:'万が一',data:MR.sav.slice(0,mgDisp),borderColor:'#c2185b',backgroundColor:'rgba(194,24,91,.1)',fill:true,tension:.3,pointRadius:0,borderWidth:2},
-          {label:'赤字ライン',data:Array(mgDisp).fill(0),borderColor:'#d63a2a',borderDash:[5,5],borderWidth:1,pointRadius:0,fill:false}
-        ]
-      },
-      options:{
-        responsive:true,
-        plugins:{legend:{position:'top',labels:{font:{size:11}}}},
-        scales:{
-          y:{ticks:{callback:v=>v.toLocaleString()+'万'},grid:{color:'#e2e8f0'}},
-          x:{ticks:{font:{size:9},maxRotation:45},grid:{display:false}}
-        }
-      }
-    });
-  },200);
 }
 </script>
 </body>
