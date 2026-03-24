@@ -5630,7 +5630,7 @@ function renderContingency(){
   h+=`</div>`;
 
   // CF表の下に追加表示
-  const cfPanel=document.getElementById('cf-panel');
+  const cfPanel=$('right-body');
   // 既存の万が一セクションがあれば削除
   const existingMG=document.getElementById('mg-cf-section');
   if(existingMG)existingMG.remove();
