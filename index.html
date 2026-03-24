@@ -3824,7 +3824,12 @@ function render(){
   // Excel出力用にグローバル保存
   window.lastR=R; window.lastDisp=disp; window.lastCYear=cYear;
   if(rTab==='cf')renderTable(R,totalYrs,disp,cLbls,cYear,effLoanAmt,isM,hAge,retAge,children,delivery);
-  else renderGraphs(R,disp,isM,totalYrs,hAge);
+  else if(rTab==='graph')renderGraphs(R,disp,isM,totalYrs,hAge);
+  else if((rTab==='mg-h'||rTab==='mg-w')&&window._mgStore){
+    const key=rTab==='mg-h'?'h':'w';
+    if(window._mgStore[key]){$('right-body').innerHTML=window._mgStore[key];}
+    else{renderTable(R,totalYrs,disp,cLbls,cYear,effLoanAmt,isM,hAge,retAge,children,delivery);rTab='cf';$('rt-cf')?.classList.add('on');}
+  }else renderTable(R,totalYrs,disp,cLbls,cYear,effLoanAmt,isM,hAge,retAge,children,delivery);
 }
 
 // ===== CF表レンダリング =====
